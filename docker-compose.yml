@@ -1,0 +1,51 @@
+services:
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: jobs
+      POSTGRES_USER: jobs
+      POSTGRES_PASSWORD: jobs
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./migrations:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U jobs -d jobs"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build:
+      context: .
+      target: api
+    ports:
+      - "8080:8080"
+    environment:
+      - DATABASE_URL=postgres://jobs:jobs@postgres:5432/jobs?sslmode=disable
+      - API_PORT=8080
+      - BOT_TOKEN=${BOT_TOKEN}
+      - CHANNEL_ID=${CHANNEL_ID}
+      - ADMIN_TELEGRAM_IDS=${ADMIN_TELEGRAM_IDS}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  bot:
+    build:
+      context: .
+      target: bot
+    environment:
+      - DATABASE_URL=postgres://jobs:jobs@postgres:5432/jobs?sslmode=disable
+      - BOT_TOKEN=${BOT_TOKEN}
+      - CHANNEL_ID=${CHANNEL_ID}
+      - ADMIN_TELEGRAM_IDS=${ADMIN_TELEGRAM_IDS}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
