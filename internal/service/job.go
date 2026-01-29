@@ -17,12 +17,12 @@ var (
 )
 
 type Publisher interface {
-	Publish(ctx context.Context, job *domain.JobWithCompany) (int, error)
+	Publish(ctx context.Context, post *domain.PostWithDetails) (int, error)
 	Delete(ctx context.Context, messageID int) error
 }
 
 type AdminNotifier interface {
-	NotifyNewJob(ctx context.Context, job *domain.JobWithCompany) error
+	NotifyNewJob(ctx context.Context, post *domain.PostWithDetails) error
 }
 
 type JobService struct {
@@ -69,8 +69,11 @@ func (s *JobService) CreateJob(ctx context.Context, telegramID int64, username s
 		return nil, err
 	}
 
-	job := &domain.Job{
-		CompanyID:   company.ID,
+	companyID := company.ID
+	job := &domain.Post{
+		PostType:    domain.PostTypeVacancy,
+		UserID:      &user.ID,
+		CompanyID:   &companyID,
 		Title:       req.Title,
 		Level:       req.Level,
 		Type:        req.Type,
@@ -87,8 +90,8 @@ func (s *JobService) CreateJob(ctx context.Context, telegramID int64, username s
 	}
 
 	if s.notifier != nil {
-		jobWithCompany := &domain.JobWithCompany{
-			Job:              *job,
+		jobWithCompany := &domain.PostWithDetails{
+			Post:             *job,
 			CompanyName:      company.Name,
 			CompanyContact:   company.Contact,
 			AuthorTelegramID: telegramID,
@@ -97,6 +100,44 @@ func (s *JobService) CreateJob(ctx context.Context, telegramID int64, username s
 	}
 
 	return job, nil
+}
+
+func (s *JobService) CreateResume(ctx context.Context, telegramID int64, username string, req *domain.CreateResumeRequest) (*domain.Post, error) {
+	// Get or create user
+	user, err := s.userRepo.GetOrCreate(ctx, telegramID, username)
+	if err != nil {
+		return nil, err
+	}
+
+	resume := &domain.Post{
+		PostType:        domain.PostTypeResume,
+		UserID:          &user.ID,
+		Title:           req.Title,
+		Level:           req.Level,
+		Type:            req.Type,
+		SalaryFrom:      req.SalaryFrom,
+		SalaryTo:        req.SalaryTo,
+		ExperienceYears: req.ExperienceYears,
+		Employment:      req.Employment,
+		About:           req.About,
+		Contact:         req.Contact,
+		ResumeLink:      req.ResumeLink,
+		Status:          domain.JobStatusPending,
+		Language:        req.Language,
+	}
+	if err := s.jobRepo.Create(ctx, resume); err != nil {
+		return nil, err
+	}
+
+	if s.notifier != nil {
+		resumeWithDetails := &domain.PostWithDetails{
+			Post:             *resume,
+			AuthorTelegramID: telegramID,
+		}
+		_ = s.notifier.NotifyNewJob(ctx, resumeWithDetails)
+	}
+
+	return resume, nil
 }
 
 func (s *JobService) GetPendingJobs(ctx context.Context) ([]domain.JobWithCompany, error) {
@@ -191,4 +232,12 @@ func (s *JobService) ArchiveJob(ctx context.Context, jobID uuid.UUID, adminTeleg
 
 func (s *JobService) GetJob(ctx context.Context, jobID uuid.UUID) (*domain.Job, error) {
 	return s.jobRepo.GetByID(ctx, jobID)
+}
+
+func (s *JobService) GetUserJobs(ctx context.Context, telegramID int64) ([]domain.Job, error) {
+	return s.jobRepo.GetByUserTelegramID(ctx, telegramID)
+}
+
+func (s *JobService) GetStats(ctx context.Context) (*domain.Stats, error) {
+	return s.jobRepo.GetStats(ctx)
 }

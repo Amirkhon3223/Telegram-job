@@ -32,7 +32,7 @@ func (r *UserRepository) Create(ctx context.Context, user *domain.User) error {
 
 func (r *UserRepository) GetByTelegramID(ctx context.Context, telegramID int64) (*domain.User, error) {
 	query := `
-		SELECT id, telegram_id, username, role, created_at
+		SELECT id, telegram_id, username, role, interface_language, created_at
 		FROM users
 		WHERE telegram_id = $1
 	`
@@ -42,12 +42,19 @@ func (r *UserRepository) GetByTelegramID(ctx context.Context, telegramID int64) 
 		&user.TelegramID,
 		&user.Username,
 		&user.Role,
+		&user.InterfaceLanguage,
 		&user.CreatedAt,
 	)
 	if err != nil {
 		return nil, err
 	}
 	return &user, nil
+}
+
+func (r *UserRepository) SetInterfaceLanguage(ctx context.Context, telegramID int64, lang string) error {
+	query := `UPDATE users SET interface_language = $1 WHERE telegram_id = $2`
+	_, err := r.db.Pool.Exec(ctx, query, lang, telegramID)
+	return err
 }
 
 func (r *UserRepository) GetOrCreate(ctx context.Context, telegramID int64, username string) (*domain.User, error) {

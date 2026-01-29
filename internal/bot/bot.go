@@ -1,10 +1,12 @@
 package bot
 
 import (
+	"context"
 	"log"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"telegram-job/internal/config"
+	"telegram-job/internal/repository"
 	"telegram-job/internal/service"
 )
 
@@ -12,10 +14,11 @@ type Bot struct {
 	api        *tgbotapi.BotAPI
 	cfg        *config.Config
 	jobService *service.JobService
+	userRepo   *repository.UserRepository
 	fsm        *FSM
 }
 
-func New(cfg *config.Config, jobService *service.JobService) (*Bot, error) {
+func New(cfg *config.Config, jobService *service.JobService, userRepo *repository.UserRepository) (*Bot, error) {
 	api, err := tgbotapi.NewBotAPI(cfg.BotToken)
 	if err != nil {
 		return nil, err
@@ -27,12 +30,13 @@ func New(cfg *config.Config, jobService *service.JobService) (*Bot, error) {
 		api:        api,
 		cfg:        cfg,
 		jobService: jobService,
+		userRepo:   userRepo,
 		fsm:        NewFSM(),
 	}, nil
 }
 
-func NewWithService(cfg *config.Config, jobService *service.JobService) (*Bot, error) {
-	return New(cfg, jobService)
+func NewWithService(cfg *config.Config, jobService *service.JobService, userRepo *repository.UserRepository) (*Bot, error) {
+	return New(cfg, jobService, userRepo)
 }
 
 func (b *Bot) SetJobService(jobService *service.JobService) {
@@ -79,4 +83,34 @@ func (b *Bot) sendMessageWithKeyboard(chatID int64, text string, keyboard tgbota
 	msg.ParseMode = "Markdown"
 	msg.ReplyMarkup = keyboard
 	b.api.Send(msg)
+}
+
+// getUserInterfaceLanguage returns the user's interface language or empty string if not set
+func (b *Bot) getUserInterfaceLanguage(telegramID int64) Language {
+	ctx := context.Background()
+	user, err := b.userRepo.GetByTelegramID(ctx, telegramID)
+	if err != nil || user.InterfaceLanguage == nil {
+		return "" // Not set
+	}
+	return Language(*user.InterfaceLanguage)
+}
+
+// setUserInterfaceLanguage sets the user's interface language
+func (b *Bot) setUserInterfaceLanguage(telegramID int64, username string, lang Language) error {
+	ctx := context.Background()
+	// Ensure user exists
+	_, err := b.userRepo.GetOrCreate(ctx, telegramID, username)
+	if err != nil {
+		return err
+	}
+	return b.userRepo.SetInterfaceLanguage(ctx, telegramID, string(lang))
+}
+
+// getInterfaceMessages returns messages in user's interface language
+func (b *Bot) getInterfaceMessages(telegramID int64) Messages {
+	lang := b.getUserInterfaceLanguage(telegramID)
+	if lang == "" {
+		lang = LangRU // fallback
+	}
+	return GetMessages(lang)
 }

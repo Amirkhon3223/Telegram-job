@@ -10,7 +10,10 @@ type State int
 
 const (
 	StateNone State = iota
-	StateWaitLanguage
+	StateWaitPostType    // NEW: Choose vacancy or resume
+	StateWaitLanguage    // Choose post language
+
+	// Vacancy states
 	StateWaitCompany
 	StateWaitContact
 	StateWaitTitle
@@ -22,6 +25,19 @@ const (
 	StateWaitSalaryTo
 	StateWaitApplyLink
 	StatePreview
+
+	// Resume states
+	StateResumeWaitTitle
+	StateResumeWaitLevel
+	StateResumeWaitExperience
+	StateResumeWaitType
+	StateResumeWaitEmployment
+	StateResumeWaitSalaryFrom
+	StateResumeWaitSalaryTo
+	StateResumeWaitAbout
+	StateResumeWaitContact
+	StateResumeWaitLink
+	StateResumePreview
 )
 
 type Language string
@@ -31,9 +47,13 @@ const (
 	LangEN Language = "en"
 )
 
-type JobDraft struct {
+// PostDraft holds data for both vacancy and resume
+type PostDraft struct {
+	PostType domain.PostType
+
+	// Vacancy fields
 	Company     string
-	Contact     string
+	Contact     string // Author contact (for admins)
 	Title       string
 	Level       domain.JobLevel
 	Type        domain.JobType
@@ -41,14 +61,24 @@ type JobDraft struct {
 	SalaryFrom  *int
 	SalaryTo    *int
 	Description string
-	ApplyLink   string
+	ApplyLink   string // For candidates
 	Language    string
+
+	// Resume fields
+	ExperienceYears *float64
+	Employment      domain.EmploymentType
+	About           string
+	ResumeLink      string
+	ResumeContact   string // Candidate contact
 }
+
+// JobDraft is alias for backward compatibility
+type JobDraft = PostDraft
 
 type UserState struct {
 	State    State
 	Language Language
-	Draft    JobDraft
+	Draft    PostDraft
 }
 
 type FSM struct {
@@ -103,7 +133,27 @@ func (f *FSM) GetLanguage(userID int64) Language {
 	return LangRU // default
 }
 
-func (f *FSM) UpdateDraft(userID int64, updater func(*JobDraft)) {
+func (f *FSM) SetPostType(userID int64, postType domain.PostType) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+
+	if _, ok := f.states[userID]; !ok {
+		f.states[userID] = &UserState{}
+	}
+	f.states[userID].Draft.PostType = postType
+}
+
+func (f *FSM) GetPostType(userID int64) domain.PostType {
+	f.mu.RLock()
+	defer f.mu.RUnlock()
+
+	if state, ok := f.states[userID]; ok {
+		return state.Draft.PostType
+	}
+	return domain.PostTypeVacancy // default
+}
+
+func (f *FSM) UpdateDraft(userID int64, updater func(*PostDraft)) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 
@@ -113,7 +163,7 @@ func (f *FSM) UpdateDraft(userID int64, updater func(*JobDraft)) {
 	updater(&f.states[userID].Draft)
 }
 
-func (f *FSM) GetDraft(userID int64) *JobDraft {
+func (f *FSM) GetDraft(userID int64) *PostDraft {
 	f.mu.RLock()
 	defer f.mu.RUnlock()
 
@@ -129,7 +179,7 @@ func (f *FSM) Reset(userID int64) {
 	delete(f.states, userID)
 }
 
-func (d *JobDraft) ToCreateRequest() *domain.CreateJobRequest {
+func (d *PostDraft) ToCreateJobRequest() *domain.CreateJobRequest {
 	return &domain.CreateJobRequest{
 		Company:     d.Company,
 		Contact:     d.Contact,
@@ -142,5 +192,26 @@ func (d *JobDraft) ToCreateRequest() *domain.CreateJobRequest {
 		Description: d.Description,
 		ApplyLink:   d.ApplyLink,
 		Language:    d.Language,
+	}
+}
+
+// ToCreateRequest is alias for backward compatibility
+func (d *PostDraft) ToCreateRequest() *domain.CreateJobRequest {
+	return d.ToCreateJobRequest()
+}
+
+func (d *PostDraft) ToCreateResumeRequest() *domain.CreateResumeRequest {
+	return &domain.CreateResumeRequest{
+		Title:           d.Title,
+		Level:           d.Level,
+		Type:            d.Type,
+		Employment:      d.Employment,
+		SalaryFrom:      d.SalaryFrom,
+		SalaryTo:        d.SalaryTo,
+		ExperienceYears: d.ExperienceYears,
+		About:           d.About,
+		Contact:         d.ResumeContact,
+		ResumeLink:      d.ResumeLink,
+		Language:        d.Language,
 	}
 }

@@ -24,28 +24,29 @@ func NewAdminNotifier(bot *tgbotapi.BotAPI, adminIDs map[int64]bool) *AdminNotif
 	}
 }
 
-func (n *AdminNotifier) NotifyNewJob(ctx context.Context, job *domain.JobWithCompany) error {
-	log.Printf("NotifyNewJob called for job %s", job.ID.String())
+func (n *AdminNotifier) NotifyNewJob(ctx context.Context, post *domain.PostWithDetails) error {
+	log.Printf("NotifyNewJob called for post %s (type: %s)", post.ID.String(), post.PostType)
 	log.Printf("Admin IDs to notify: %v", n.adminIDs)
 
-	text := formatAdminNotification(job)
+	text := formatAdminNotification(post)
 
-	// Формируем кнопки
 	var keyboardRows [][]tgbotapi.InlineKeyboardButton
 
-	// Кнопка связи с автором
-	contact := job.CompanyContact
+	// Contact button
+	contact := post.CompanyContact
+	if contact == "" {
+		contact = post.Contact
+	}
 	if strings.HasPrefix(contact, "@") {
-		// Telegram username - делаем ссылку
 		keyboardRows = append(keyboardRows, tgbotapi.NewInlineKeyboardRow(
 			tgbotapi.NewInlineKeyboardButtonURL("📞 Связаться с автором", "https://t.me/"+strings.TrimPrefix(contact, "@")),
 		))
 	}
 
-	// Кнопки Approve/Reject
+	// Approve/Reject buttons
 	keyboardRows = append(keyboardRows, tgbotapi.NewInlineKeyboardRow(
-		tgbotapi.NewInlineKeyboardButtonData("✅ Approve", "approve:"+job.ID.String()),
-		tgbotapi.NewInlineKeyboardButtonData("❌ Reject", "reject:"+job.ID.String()),
+		tgbotapi.NewInlineKeyboardButtonData("✅ Approve", "approve:"+post.ID.String()),
+		tgbotapi.NewInlineKeyboardButtonData("❌ Reject", "reject:"+post.ID.String()),
 	))
 
 	keyboard := tgbotapi.NewInlineKeyboardMarkup(keyboardRows...)
@@ -66,31 +67,61 @@ func (n *AdminNotifier) NotifyNewJob(ctx context.Context, job *domain.JobWithCom
 	return nil
 }
 
-func (n *AdminNotifier) NotifyAuthor(authorTelegramID int64, approved bool, jobTitle string, jobLanguage string) {
+func (n *AdminNotifier) NotifyAuthor(authorTelegramID int64, approved bool, postTitle string, postLanguage string, postType domain.PostType) {
 	var text string
-	if jobLanguage == "en" {
+	isResume := postType == domain.PostTypeResume
+
+	if postLanguage == "en" {
 		if approved {
-			text = fmt.Sprintf("✅ *Your job has been approved!*\n\n"+
-				"Job *%s* is now published in @BridgeJob channel\n\n"+
-				"📢 View: https://t.me/BridgeJob\n\n"+
-				"Thank you for using @BridgeJobsBot!", escapeMarkdownAdmin(jobTitle))
+			if isResume {
+				text = fmt.Sprintf("✅ *Your resume has been approved!*\n\n"+
+					"Resume *%s* is now published in @BridgeJob channel\n\n"+
+					"📢 View: https://t.me/BridgeJob\n\n"+
+					"Thank you for using @BridgeJobsBot!", escapeMarkdownAdmin(postTitle))
+			} else {
+				text = fmt.Sprintf("✅ *Your job has been approved!*\n\n"+
+					"Job *%s* is now published in @BridgeJob channel\n\n"+
+					"📢 View: https://t.me/BridgeJob\n\n"+
+					"Thank you for using @BridgeJobsBot!", escapeMarkdownAdmin(postTitle))
+			}
 		} else {
-			text = fmt.Sprintf("❌ *Your job has been rejected*\n\n"+
-				"Job *%s* did not pass moderation.\n\n"+
-				"Please try again with correct data: /post\\_job\n\n"+
-				"📢 Channel: @BridgeJob", escapeMarkdownAdmin(jobTitle))
+			if isResume {
+				text = fmt.Sprintf("❌ *Your resume has been rejected*\n\n"+
+					"Resume *%s* did not pass moderation.\n\n"+
+					"Please try again with correct data: /post\\_job\n\n"+
+					"📢 Channel: @BridgeJob", escapeMarkdownAdmin(postTitle))
+			} else {
+				text = fmt.Sprintf("❌ *Your job has been rejected*\n\n"+
+					"Job *%s* did not pass moderation.\n\n"+
+					"Please try again with correct data: /post\\_job\n\n"+
+					"📢 Channel: @BridgeJob", escapeMarkdownAdmin(postTitle))
+			}
 		}
 	} else {
 		if approved {
-			text = fmt.Sprintf("✅ *Ваша вакансия одобрена!*\n\n"+
-				"Вакансия *%s* опубликована в канале @BridgeJob\n\n"+
-				"📢 Смотреть: https://t.me/BridgeJob\n\n"+
-				"Спасибо за использование @BridgeJobsBot!", escapeMarkdownAdmin(jobTitle))
+			if isResume {
+				text = fmt.Sprintf("✅ *Ваше резюме одобрено!*\n\n"+
+					"Резюме *%s* опубликовано в канале @BridgeJob\n\n"+
+					"📢 Смотреть: https://t.me/BridgeJob\n\n"+
+					"Спасибо за использование @BridgeJobsBot!", escapeMarkdownAdmin(postTitle))
+			} else {
+				text = fmt.Sprintf("✅ *Ваша вакансия одобрена!*\n\n"+
+					"Вакансия *%s* опубликована в канале @BridgeJob\n\n"+
+					"📢 Смотреть: https://t.me/BridgeJob\n\n"+
+					"Спасибо за использование @BridgeJobsBot!", escapeMarkdownAdmin(postTitle))
+			}
 		} else {
-			text = fmt.Sprintf("❌ *Ваша вакансия отклонена*\n\n"+
-				"Вакансия *%s* не прошла модерацию.\n\n"+
-				"Попробуйте отправить заново с корректными данными: /post\\_job\n\n"+
-				"📢 Канал: @BridgeJob", escapeMarkdownAdmin(jobTitle))
+			if isResume {
+				text = fmt.Sprintf("❌ *Ваше резюме отклонено*\n\n"+
+					"Резюме *%s* не прошло модерацию.\n\n"+
+					"Попробуйте отправить заново с корректными данными: /post\\_job\n\n"+
+					"📢 Канал: @BridgeJob", escapeMarkdownAdmin(postTitle))
+			} else {
+				text = fmt.Sprintf("❌ *Ваша вакансия отклонена*\n\n"+
+					"Вакансия *%s* не прошла модерацию.\n\n"+
+					"Попробуйте отправить заново с корректными данными: /post\\_job\n\n"+
+					"📢 Канал: @BridgeJob", escapeMarkdownAdmin(postTitle))
+			}
 		}
 	}
 
@@ -99,16 +130,30 @@ func (n *AdminNotifier) NotifyAuthor(authorTelegramID int64, approved bool, jobT
 	n.bot.Send(msg)
 }
 
-func (n *AdminNotifier) NotifyAuthorDeleted(authorTelegramID int64, jobTitle string, jobLanguage string) {
+func (n *AdminNotifier) NotifyAuthorDeleted(authorTelegramID int64, postTitle string, postLanguage string, postType domain.PostType) {
 	var text string
-	if jobLanguage == "en" {
-		text = fmt.Sprintf("🗑 *Your job has been removed from channel*\n\n"+
-			"Job *%s* was removed from @BridgeJob\n\n"+
-			"To post a new job: /post\\_job", escapeMarkdownAdmin(jobTitle))
+	isResume := postType == domain.PostTypeResume
+
+	if postLanguage == "en" {
+		if isResume {
+			text = fmt.Sprintf("🗑 *Your resume has been removed from channel*\n\n"+
+				"Resume *%s* was removed from @BridgeJob\n\n"+
+				"To post again: /post\\_job", escapeMarkdownAdmin(postTitle))
+		} else {
+			text = fmt.Sprintf("🗑 *Your job has been removed from channel*\n\n"+
+				"Job *%s* was removed from @BridgeJob\n\n"+
+				"To post a new job: /post\\_job", escapeMarkdownAdmin(postTitle))
+		}
 	} else {
-		text = fmt.Sprintf("🗑 *Ваша вакансия удалена из канала*\n\n"+
-			"Вакансия *%s* была удалена из @BridgeJob\n\n"+
-			"Если хотите разместить новую вакансию: /post\\_job", escapeMarkdownAdmin(jobTitle))
+		if isResume {
+			text = fmt.Sprintf("🗑 *Ваше резюме удалено из канала*\n\n"+
+				"Резюме *%s* было удалено из @BridgeJob\n\n"+
+				"Если хотите разместить новое: /post\\_job", escapeMarkdownAdmin(postTitle))
+		} else {
+			text = fmt.Sprintf("🗑 *Ваша вакансия удалена из канала*\n\n"+
+				"Вакансия *%s* была удалена из @BridgeJob\n\n"+
+				"Если хотите разместить новую вакансию: /post\\_job", escapeMarkdownAdmin(postTitle))
+		}
 	}
 
 	msg := tgbotapi.NewMessage(authorTelegramID, text)
@@ -127,22 +172,72 @@ func escapeMarkdownAdmin(s string) string {
 	return replacer.Replace(s)
 }
 
-func formatAdminNotification(job *domain.JobWithCompany) string {
+func formatAdminNotification(post *domain.PostWithDetails) string {
 	salary := "Не указана"
-	if job.SalaryFrom != nil && job.SalaryTo != nil {
-		salary = fmt.Sprintf("$%d – $%d", *job.SalaryFrom, *job.SalaryTo)
-	} else if job.SalaryFrom != nil {
-		salary = fmt.Sprintf("От $%d", *job.SalaryFrom)
-	} else if job.SalaryTo != nil {
-		salary = fmt.Sprintf("До $%d", *job.SalaryTo)
+	if post.SalaryFrom != nil && post.SalaryTo != nil {
+		salary = fmt.Sprintf("$%d – $%d", *post.SalaryFrom, *post.SalaryTo)
+	} else if post.SalaryFrom != nil {
+		salary = fmt.Sprintf("От $%d", *post.SalaryFrom)
+	} else if post.SalaryTo != nil {
+		salary = fmt.Sprintf("До $%d", *post.SalaryTo)
+	}
+
+	levelDisplay := string(post.Level)
+	if post.Level == "" {
+		levelDisplay = "Не указан"
 	}
 
 	langDisplay := "🇷🇺 RU"
-	if job.Language == "en" {
+	if post.Language == "en" {
 		langDisplay = "🇬🇧 EN"
 	}
 
-	return fmt.Sprintf(`📋 *Новая вакансия на модерацию*
+	// Resume format
+	if post.PostType == domain.PostTypeResume {
+		experience := "Не указан"
+		if post.ExperienceYears != nil {
+			experience = fmt.Sprintf("%.1f лет", *post.ExperienceYears)
+		}
+
+		contact := post.Contact
+		resumeLink := "Не указана"
+		if post.ResumeLink != "" {
+			resumeLink = post.ResumeLink
+		}
+
+		return fmt.Sprintf(`👤 *Новое резюме на модерацию*
+
+🌐 *Язык:* %s
+💼 *Позиция:* %s
+📊 *Уровень:* %s
+⏱ *Опыт:* %s
+🌍 *Формат:* %s
+🕒 *Занятость:* %s
+💰 *Ожидания:* %s
+📄 *Ссылка на резюме:* %s
+📞 *Контакт:* %s
+
+🧑‍💻 *О кандидате:*
+%s
+
+———
+Resume ID: `+"`%s`",
+			langDisplay,
+			escapeMarkdownAdmin(post.Title),
+			levelDisplay,
+			experience,
+			post.Type,
+			post.Employment,
+			salary,
+			resumeLink,
+			escapeMarkdownAdmin(contact),
+			escapeMarkdownAdmin(post.About),
+			post.ID.String(),
+		)
+	}
+
+	// Vacancy format
+	return fmt.Sprintf(`🏢 *Новая вакансия на модерацию*
 
 🌐 *Язык:* %s
 🏢 *Компания:* %s
@@ -160,16 +255,16 @@ func formatAdminNotification(job *domain.JobWithCompany) string {
 ———
 Job ID: `+"`%s`",
 		langDisplay,
-		escapeMarkdownAdmin(job.CompanyName),
-		escapeMarkdownAdmin(job.Title),
-		job.Level,
-		job.Type,
-		job.Category,
+		escapeMarkdownAdmin(post.CompanyName),
+		escapeMarkdownAdmin(post.Title),
+		levelDisplay,
+		post.Type,
+		post.Category,
 		salary,
-		escapeMarkdownAdmin(job.ApplyLink),
-		escapeMarkdownAdmin(job.CompanyContact),
-		escapeMarkdownAdmin(job.Description),
-		job.ID.String(),
+		escapeMarkdownAdmin(post.ApplyLink),
+		escapeMarkdownAdmin(post.CompanyContact),
+		escapeMarkdownAdmin(post.Description),
+		post.ID.String(),
 	)
 }
 
@@ -229,7 +324,7 @@ func (b *Bot) handleAdminCallback(callback *tgbotapi.CallbackQuery) {
 		// Уведомляем автора
 		if jobInfo != nil {
 			notifier := NewAdminNotifier(b.api, b.cfg.AdminTelegramIDs)
-			notifier.NotifyAuthor(jobInfo.AuthorTelegramID, true, jobInfo.Title, jobInfo.Language)
+			notifier.NotifyAuthor(jobInfo.AuthorTelegramID, true, jobInfo.Title, jobInfo.Language, jobInfo.PostType)
 		}
 
 		return
@@ -244,7 +339,7 @@ func (b *Bot) handleAdminCallback(callback *tgbotapi.CallbackQuery) {
 			return
 		}
 
-		// Получаем данные о вакансии до reject
+		// Получаем данные о публикации до reject
 		jobInfo, _ := b.jobService.GetJobWithCompany(ctx, jobID)
 
 		err = b.jobService.RejectJob(ctx, jobID, adminID, "Rejected by admin")
@@ -265,7 +360,7 @@ func (b *Bot) handleAdminCallback(callback *tgbotapi.CallbackQuery) {
 		// Уведомляем автора
 		if jobInfo != nil {
 			notifier := NewAdminNotifier(b.api, b.cfg.AdminTelegramIDs)
-			notifier.NotifyAuthor(jobInfo.AuthorTelegramID, false, jobInfo.Title, jobInfo.Language)
+			notifier.NotifyAuthor(jobInfo.AuthorTelegramID, false, jobInfo.Title, jobInfo.Language, jobInfo.PostType)
 		}
 
 		return
@@ -330,7 +425,7 @@ func (b *Bot) handleAdminCallback(callback *tgbotapi.CallbackQuery) {
 		// Уведомляем автора об удалении
 		if jobInfo != nil {
 			notifier := NewAdminNotifier(b.api, b.cfg.AdminTelegramIDs)
-			notifier.NotifyAuthorDeleted(jobInfo.AuthorTelegramID, jobInfo.Title, jobInfo.Language)
+			notifier.NotifyAuthorDeleted(jobInfo.AuthorTelegramID, jobInfo.Title, jobInfo.Language, jobInfo.PostType)
 		}
 
 		return

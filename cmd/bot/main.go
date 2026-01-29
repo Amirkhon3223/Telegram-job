@@ -43,7 +43,7 @@ func main() {
 	userRepo := repository.NewUserRepository(db)
 
 	// Initialize bot first (to get bot API)
-	telegramBot, err := bot.New(cfg, nil)
+	telegramBot, err := bot.New(cfg, nil, userRepo)
 	if err != nil {
 		log.Fatalf("Failed to create bot: %v", err)
 	}
