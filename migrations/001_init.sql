@@ -1,5 +1,5 @@
 -- Enum types
-CREATE TYPE job_level AS ENUM ('junior', 'middle', 'senior');
+CREATE TYPE job_level AS ENUM ('junior', 'middle', 'senior', 'internship', '');
 CREATE TYPE job_type AS ENUM ('remote', 'hybrid', 'onsite');
 CREATE TYPE job_category AS ENUM ('web2', 'web3', 'dev');
 CREATE TYPE job_status AS ENUM ('draft', 'pending', 'approved', 'published', 'rejected', 'archived');
@@ -13,6 +13,7 @@ CREATE TABLE users (
     telegram_id BIGINT UNIQUE NOT NULL,
     username TEXT,
     role user_role NOT NULL DEFAULT 'recruiter',
+    interface_language VARCHAR(5),
     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 

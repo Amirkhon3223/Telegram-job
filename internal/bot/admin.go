@@ -137,6 +137,11 @@ func formatAdminNotification(job *domain.JobWithCompany) string {
 		salary = fmt.Sprintf("До $%d", *job.SalaryTo)
 	}
 
+	levelDisplay := string(job.Level)
+	if job.Level == "" {
+		levelDisplay = "Не указан"
+	}
+
 	langDisplay := "🇷🇺 RU"
 	if job.Language == "en" {
 		langDisplay = "🇬🇧 EN"
@@ -162,7 +167,7 @@ Job ID: `+"`%s`",
 		langDisplay,
 		escapeMarkdownAdmin(job.CompanyName),
 		escapeMarkdownAdmin(job.Title),
-		job.Level,
+		levelDisplay,
 		job.Type,
 		job.Category,
 		salary,

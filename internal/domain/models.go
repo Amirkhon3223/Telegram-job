@@ -9,9 +9,11 @@ import (
 type JobLevel string
 
 const (
-	JobLevelJunior JobLevel = "junior"
-	JobLevelMiddle JobLevel = "middle"
-	JobLevelSenior JobLevel = "senior"
+	JobLevelJunior     JobLevel = "junior"
+	JobLevelMiddle     JobLevel = "middle"
+	JobLevelSenior     JobLevel = "senior"
+	JobLevelInternship JobLevel = "internship"
+	JobLevelSkip       JobLevel = ""
 )
 
 type JobType string
@@ -49,11 +51,12 @@ const (
 )
 
 type User struct {
-	ID         uuid.UUID `json:"id"`
-	TelegramID int64     `json:"telegram_id"`
-	Username   string    `json:"username"`
-	Role       UserRole  `json:"role"`
-	CreatedAt  time.Time `json:"created_at"`
+	ID                uuid.UUID `json:"id"`
+	TelegramID        int64     `json:"telegram_id"`
+	Username          string    `json:"username"`
+	Role              UserRole  `json:"role"`
+	InterfaceLanguage *string   `json:"interface_language,omitempty"`
+	CreatedAt         time.Time `json:"created_at"`
 }
 
 type Company struct {
@@ -104,4 +107,13 @@ type CreateJobRequest struct {
 	Description string      `json:"description"`
 	ApplyLink   string      `json:"apply_link"`
 	Language    string      `json:"language"`
+}
+
+// Stats contains job statistics
+type Stats struct {
+	Total     int `json:"total"`
+	Pending   int `json:"pending"`
+	Published int `json:"published"`
+	Rejected  int `json:"rejected"`
+	Archived  int `json:"archived"`
 }

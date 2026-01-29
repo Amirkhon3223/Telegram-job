@@ -63,9 +63,16 @@ func formatJobPost(job *domain.JobWithCompany) string {
 	}
 
 	levelEmoji := map[domain.JobLevel]string{
-		domain.JobLevelJunior: "🌱",
-		domain.JobLevelMiddle: "🌿",
-		domain.JobLevelSenior: "🌳",
+		domain.JobLevelJunior:     "🌱",
+		domain.JobLevelMiddle:     "🌿",
+		domain.JobLevelSenior:     "🌳",
+		domain.JobLevelInternship: "🎓",
+		domain.JobLevelSkip:       "📊",
+	}
+
+	levelDisplay := string(job.Level)
+	if job.Level == "" {
+		levelDisplay = "Не указан"
 	}
 
 	typeEmoji := map[domain.JobType]string{
@@ -99,7 +106,7 @@ func formatJobPost(job *domain.JobWithCompany) string {
 📮 _Разместить вакансию: @BridgeJobsBot_`,
 		escapeMarkdown(job.Title),
 		escapeMarkdown(job.CompanyName),
-		levelEmoji[job.Level], job.Level,
+		levelEmoji[job.Level], levelDisplay,
 		typeEmoji[job.Type], job.Type,
 		categoryEmoji[job.Category], job.Category,
 		salary,

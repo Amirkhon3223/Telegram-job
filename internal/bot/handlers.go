@@ -26,40 +26,67 @@ func (b *Bot) handleCommand(msg *tgbotapi.Message) {
 	switch msg.Command() {
 	case "start":
 		b.cmdStart(msg)
+	case "help":
+		b.cmdHelp(msg)
 	case "post_job":
 		b.cmdPostJob(msg)
-	case "cancel":
-		b.cmdCancel(msg)
-	case "status":
-		b.cmdStatus(msg)
-	case "prices":
+	case "myjobs":
+		b.cmdMyJobs(msg)
+	case "pricing", "prices":
 		b.cmdPrices(msg)
+	case "faq":
+		b.cmdFAQ(msg)
+	case "about":
+		b.cmdAbout(msg)
 	case "contact":
 		b.cmdContact(msg)
+	case "cancel":
+		b.cmdCancel(msg)
+	case "language":
+		b.cmdLanguage(msg)
+	// Admin commands
+	case "pending":
+		b.cmdPending(msg)
+	case "stats":
+		b.cmdStats(msg)
+	case "admins":
+		b.cmdAdmins(msg)
 	default:
-		b.sendMessage(msg.Chat.ID, "Unknown command. Use /post\\_job to submit a job.")
+		m := b.getInterfaceMessages(msg.From.ID)
+		b.sendMessage(msg.Chat.ID, m.UnknownCommand)
 	}
 }
 
 func (b *Bot) cmdStart(msg *tgbotapi.Message) {
-	text := `🎯 *BridgeJob Bot*
+	// Check if user has interface language set
+	lang := b.getUserInterfaceLanguage(msg.From.ID)
 
-Я помогу разместить вакансию в канале @BridgeJob
+	if lang == "" {
+		// First time - show bilingual welcome and ask to choose language
+		text := `👋 *Добро пожаловать! / Welcome!*
 
-I help you post jobs to @BridgeJob channel
+Это сервис для публикации вакансий с ручной модерацией.
+This is a job posting service with manual moderation.
 
-*Команды / Commands:*
-/post\_job — Разместить вакансию / Post a job
-/prices — Прайс-лист / Price list
-/contact — Связаться / Contact us
-/cancel — Отменить / Cancel
+Пожалуйста, выберите язык / Please choose your language:`
 
-📢 Канал / Channel: @BridgeJob`
+		keyboard := tgbotapi.NewInlineKeyboardMarkup(
+			tgbotapi.NewInlineKeyboardRow(
+				tgbotapi.NewInlineKeyboardButtonData("🇷🇺 Русский", "interface_lang:ru"),
+				tgbotapi.NewInlineKeyboardButtonData("🇬🇧 English", "interface_lang:en"),
+			),
+		)
+		b.sendMessageWithKeyboard(msg.Chat.ID, text, keyboard)
+		return
+	}
 
-	b.sendMessage(msg.Chat.ID, text)
+	// User has language set - show normal welcome
+	m := GetMessages(lang)
+	b.sendMessage(msg.Chat.ID, m.Welcome)
 }
 
 func (b *Bot) cmdPostJob(msg *tgbotapi.Message) {
+	m := b.getInterfaceMessages(msg.From.ID)
 	b.fsm.Reset(msg.From.ID)
 	b.fsm.SetState(msg.From.ID, StateWaitLanguage)
 
@@ -69,55 +96,273 @@ func (b *Bot) cmdPostJob(msg *tgbotapi.Message) {
 			tgbotapi.NewInlineKeyboardButtonData("🇬🇧 English", "lang:en"),
 		),
 	)
-	b.sendMessageWithKeyboard(msg.Chat.ID, "🌐 Выберите язык / Choose language:", keyboard)
+	b.sendMessageWithKeyboard(msg.Chat.ID, m.ChooseJobLanguage, keyboard)
 }
 
 func (b *Bot) cmdCancel(msg *tgbotapi.Message) {
+	// Use FSM language if in job creation flow, otherwise interface language
 	lang := b.fsm.GetLanguage(msg.From.ID)
+	if lang == "" {
+		lang = b.getUserInterfaceLanguage(msg.From.ID)
+		if lang == "" {
+			lang = LangRU
+		}
+	}
 	m := GetMessages(lang)
 	b.fsm.Reset(msg.From.ID)
 	b.sendMessage(msg.Chat.ID, m.Cancelled)
 }
 
-func (b *Bot) cmdStatus(msg *tgbotapi.Message) {
-	b.sendMessage(msg.Chat.ID, "Status check is not implemented yet.")
+func (b *Bot) cmdLanguage(msg *tgbotapi.Message) {
+	m := b.getInterfaceMessages(msg.From.ID)
+	keyboard := tgbotapi.NewInlineKeyboardMarkup(
+		tgbotapi.NewInlineKeyboardRow(
+			tgbotapi.NewInlineKeyboardButtonData("🇷🇺 Русский", "interface_lang:ru"),
+			tgbotapi.NewInlineKeyboardButtonData("🇬🇧 English", "interface_lang:en"),
+		),
+	)
+	b.sendMessageWithKeyboard(msg.Chat.ID, m.ChooseLanguage, keyboard)
 }
 
 func (b *Bot) cmdPrices(msg *tgbotapi.Message) {
-	text := `💰 *Прайс-лист / Price List*
+	m := b.getInterfaceMessages(msg.From.ID)
+	b.sendMessage(msg.Chat.ID, m.Pricing)
+}
 
-📌 *Стандартное размещение / Standard* — *$25*
-1 пост в канале / 1 post in channel
+func (b *Bot) cmdContact(msg *tgbotapi.Message) {
+	m := b.getInterfaceMessages(msg.From.ID)
+	b.sendMessage(msg.Chat.ID, m.Contact)
+}
 
-⭐ *Featured* — *$65*
-Пост + закреп 48ч / Post + pin 48h
+func (b *Bot) cmdHelp(msg *tgbotapi.Message) {
+	m := b.getInterfaceMessages(msg.From.ID)
+	text := m.Help
 
-📦 *Пакет 5 вакансий / 5 Jobs Pack* — *$100*
-5 стандартных постов / 5 standard posts
-
-💳 *Оплата / Payment:*
-USDT / Wise / PayPal
-
-📞 *Контакт / Contact:*
-@amirichinvoker | @manizha\_ash
-
-📢 Канал / Channel: @BridgeJob`
+	// Добавляем админские команды для админов
+	if b.cfg.IsAdmin(msg.From.ID) {
+		text += m.HelpAdmin
+	}
 
 	b.sendMessage(msg.Chat.ID, text)
 }
 
-func (b *Bot) cmdContact(msg *tgbotapi.Message) {
-	text := `📞 *Контакт / Contact*
+func (b *Bot) cmdFAQ(msg *tgbotapi.Message) {
+	m := b.getInterfaceMessages(msg.From.ID)
+	b.sendMessage(msg.Chat.ID, m.FAQ)
+}
 
-По всем вопросам обращайтесь:
-For any questions contact:
+func (b *Bot) cmdAbout(msg *tgbotapi.Message) {
+	m := b.getInterfaceMessages(msg.From.ID)
+	b.sendMessage(msg.Chat.ID, m.About)
+}
 
-👤 @amirichinvoker
-👤 @manizha\_ash
+func (b *Bot) cmdMyJobs(msg *tgbotapi.Message) {
+	m := b.getInterfaceMessages(msg.From.ID)
+	lang := b.getUserInterfaceLanguage(msg.From.ID)
 
-📢 Канал / Channel: @BridgeJob`
+	ctx := context.Background()
+	jobs, err := b.jobService.GetUserJobs(ctx, msg.From.ID)
+	if err != nil {
+		log.Printf("Error getting user jobs: %v", err)
+		b.sendMessage(msg.Chat.ID, "Error / Ошибка")
+		return
+	}
+
+	if len(jobs) == 0 {
+		b.sendMessage(msg.Chat.ID, m.NoJobs)
+		return
+	}
+
+	text := m.YourJobs + "\n"
+	for i, job := range jobs {
+		statusEmoji := getStatusEmoji(job.Status)
+		statusText := getStatusText(job.Status, lang)
+		text += fmt.Sprintf("\n%d. *%s*\n   %s %s\n", i+1, escapeMarkdown(job.Title), statusEmoji, statusText)
+	}
 
 	b.sendMessage(msg.Chat.ID, text)
+}
+
+// Admin commands
+
+func (b *Bot) cmdPending(msg *tgbotapi.Message) {
+	m := b.getInterfaceMessages(msg.From.ID)
+
+	if !b.cfg.IsAdmin(msg.From.ID) {
+		b.sendMessage(msg.Chat.ID, m.NoPermission)
+		return
+	}
+
+	ctx := context.Background()
+	jobs, err := b.jobService.GetPendingJobs(ctx)
+	if err != nil {
+		log.Printf("Error getting pending jobs: %v", err)
+		b.sendMessage(msg.Chat.ID, "Error / Ошибка")
+		return
+	}
+
+	if len(jobs) == 0 {
+		b.sendMessage(msg.Chat.ID, m.NoPendingJobs)
+		return
+	}
+
+	b.sendMessage(msg.Chat.ID, fmt.Sprintf(m.PendingJobsCount, len(jobs)))
+
+	// Отправляем каждую вакансию только этому админу
+	for _, job := range jobs {
+		b.sendPendingJobToAdmin(msg.Chat.ID, &job)
+	}
+}
+
+func (b *Bot) sendPendingJobToAdmin(chatID int64, job *domain.JobWithCompany) {
+	text := formatAdminNotification(job)
+
+	var keyboardRows [][]tgbotapi.InlineKeyboardButton
+
+	// Кнопка связи с автором
+	contact := job.CompanyContact
+	if strings.HasPrefix(contact, "@") {
+		keyboardRows = append(keyboardRows, tgbotapi.NewInlineKeyboardRow(
+			tgbotapi.NewInlineKeyboardButtonURL("📞 Связаться с автором", "https://t.me/"+strings.TrimPrefix(contact, "@")),
+		))
+	}
+
+	// Кнопки Approve/Reject
+	keyboardRows = append(keyboardRows, tgbotapi.NewInlineKeyboardRow(
+		tgbotapi.NewInlineKeyboardButtonData("✅ Approve", "approve:"+job.ID.String()),
+		tgbotapi.NewInlineKeyboardButtonData("❌ Reject", "reject:"+job.ID.String()),
+	))
+
+	keyboard := tgbotapi.NewInlineKeyboardMarkup(keyboardRows...)
+
+	msg := tgbotapi.NewMessage(chatID, text)
+	msg.ParseMode = "Markdown"
+	msg.ReplyMarkup = keyboard
+	b.api.Send(msg)
+}
+
+func (b *Bot) cmdStats(msg *tgbotapi.Message) {
+	m := b.getInterfaceMessages(msg.From.ID)
+	lang := b.getUserInterfaceLanguage(msg.From.ID)
+
+	if !b.cfg.IsAdmin(msg.From.ID) {
+		b.sendMessage(msg.Chat.ID, m.NoPermission)
+		return
+	}
+
+	ctx := context.Background()
+	stats, err := b.jobService.GetStats(ctx)
+	if err != nil {
+		log.Printf("Error getting stats: %v", err)
+		b.sendMessage(msg.Chat.ID, "Error / Ошибка")
+		return
+	}
+
+	var text string
+	if lang == LangEN {
+		text = fmt.Sprintf(`📊 *Service Statistics*
+
+• Total jobs: %d
+• Pending: %d
+• Published: %d
+• Rejected: %d
+• Archived: %d`,
+			stats.Total,
+			stats.Pending,
+			stats.Published,
+			stats.Rejected,
+			stats.Archived,
+		)
+	} else {
+		text = fmt.Sprintf(`📊 *Статистика сервиса*
+
+• Всего вакансий: %d
+• На модерации: %d
+• Опубликовано: %d
+• Отклонено: %d
+• В архиве: %d`,
+			stats.Total,
+			stats.Pending,
+			stats.Published,
+			stats.Rejected,
+			stats.Archived,
+		)
+	}
+
+	b.sendMessage(msg.Chat.ID, text)
+}
+
+func (b *Bot) cmdAdmins(msg *tgbotapi.Message) {
+	m := b.getInterfaceMessages(msg.From.ID)
+	lang := b.getUserInterfaceLanguage(msg.From.ID)
+
+	if !b.cfg.IsAdmin(msg.From.ID) {
+		b.sendMessage(msg.Chat.ID, m.NoPermission)
+		return
+	}
+
+	var text string
+	if lang == LangEN {
+		text = "👮 *Service Administrators:*\n"
+	} else {
+		text = "👮 *Администраторы сервиса:*\n"
+	}
+	for adminID := range b.cfg.AdminTelegramIDs {
+		text += fmt.Sprintf("\n• ID: `%d`", adminID)
+	}
+
+	b.sendMessage(msg.Chat.ID, text)
+}
+
+func getStatusEmoji(status domain.JobStatus) string {
+	switch status {
+	case domain.JobStatusPending:
+		return "🕒"
+	case domain.JobStatusApproved:
+		return "✅"
+	case domain.JobStatusPublished:
+		return "📢"
+	case domain.JobStatusRejected:
+		return "❌"
+	case domain.JobStatusArchived:
+		return "🗑"
+	default:
+		return "📝"
+	}
+}
+
+func getStatusText(status domain.JobStatus, lang Language) string {
+	if lang == LangEN {
+		switch status {
+		case domain.JobStatusPending:
+			return "Pending"
+		case domain.JobStatusApproved:
+			return "Approved"
+		case domain.JobStatusPublished:
+			return "Published"
+		case domain.JobStatusRejected:
+			return "Rejected"
+		case domain.JobStatusArchived:
+			return "Archived"
+		default:
+			return "Draft"
+		}
+	}
+	// Russian (default)
+	switch status {
+	case domain.JobStatusPending:
+		return "На модерации"
+	case domain.JobStatusApproved:
+		return "Одобрена"
+	case domain.JobStatusPublished:
+		return "Опубликована"
+	case domain.JobStatusRejected:
+		return "Отклонена"
+	case domain.JobStatusArchived:
+		return "В архиве"
+	default:
+		return "Черновик"
+	}
 }
 
 func (b *Bot) handleMessage(msg *tgbotapi.Message) {
@@ -156,10 +401,15 @@ func (b *Bot) handleMessage(msg *tgbotapi.Message) {
 		b.sendLevelKeyboard(msg.Chat.ID, lang)
 
 	case StateWaitLevel:
-		level := domain.JobLevel(strings.ToLower(msg.Text))
-		if !isValidLevel(level) {
-			b.sendMessage(msg.Chat.ID, m.InvalidNumber)
-			return
+		var level domain.JobLevel
+		if isSkip(msg.Text) {
+			level = domain.JobLevelSkip
+		} else {
+			level = domain.JobLevel(strings.ToLower(msg.Text))
+			if !isValidLevel(level) {
+				b.sendMessage(msg.Chat.ID, "Выберите уровень кнопками или введите 'skip' / 'скип'")
+				return
+			}
 		}
 		b.fsm.UpdateDraft(msg.From.ID, func(d *JobDraft) {
 			d.Level = level
@@ -249,6 +499,10 @@ func (b *Bot) sendLevelKeyboard(chatID int64, lang Language) {
 			tgbotapi.NewInlineKeyboardButtonData(m.LevelMiddle, "level:middle"),
 			tgbotapi.NewInlineKeyboardButtonData(m.LevelSenior, "level:senior"),
 		),
+		tgbotapi.NewInlineKeyboardRow(
+			tgbotapi.NewInlineKeyboardButtonData(m.LevelInternship, "level:internship"),
+			tgbotapi.NewInlineKeyboardButtonData(m.LevelSkip, "level:skip"),
+		),
 	)
 	b.sendMessageWithKeyboard(chatID, m.Step4Level, keyboard)
 }
@@ -298,9 +552,14 @@ func (b *Bot) sendPreview(msg *tgbotapi.Message) {
 	if draft.SalaryFrom != nil && draft.SalaryTo != nil {
 		salary = fmt.Sprintf("$%d – $%d", *draft.SalaryFrom, *draft.SalaryTo)
 	} else if draft.SalaryFrom != nil {
-		salary = fmt.Sprintf(m.SalaryFrom, *draft.SalaryFrom)
+		salary = fmt.Sprintf(m.SalaryFromLabel, *draft.SalaryFrom)
 	} else if draft.SalaryTo != nil {
-		salary = fmt.Sprintf(m.SalaryTo, *draft.SalaryTo)
+		salary = fmt.Sprintf(m.SalaryToLabel, *draft.SalaryTo)
+	}
+
+	levelDisplay := string(draft.Level)
+	if draft.Level == "" {
+		levelDisplay = m.LevelNotSpecified
 	}
 
 	text := fmt.Sprintf(`%s
@@ -320,15 +579,15 @@ func (b *Bot) sendPreview(msg *tgbotapi.Message) {
 ———
 %s`,
 		m.PreviewTitle,
-		m.Company, escapeMarkdown(draft.Company),
-		m.Contact, escapeMarkdown(draft.Contact),
-		m.Title, escapeMarkdown(draft.Title),
-		m.Level, draft.Level,
-		m.Type, draft.Type,
-		m.Category, draft.Category,
-		m.Salary, salary,
-		m.ApplyLink, escapeMarkdown(draft.ApplyLink),
-		m.Description,
+		m.CompanyLabel, escapeMarkdown(draft.Company),
+		m.ContactLabel, escapeMarkdown(draft.Contact),
+		m.TitleLabel, escapeMarkdown(draft.Title),
+		m.LevelLabel, levelDisplay,
+		m.TypeLabel, draft.Type,
+		m.CategoryLabel, draft.Category,
+		m.SalaryLabel, salary,
+		m.ApplyLinkLabel, escapeMarkdown(draft.ApplyLink),
+		m.DescriptionLabel,
 		escapeMarkdown(draft.Description),
 		m.PreviewConfirm,
 	)
@@ -352,7 +611,20 @@ func (b *Bot) handleCallback(callback *tgbotapi.CallbackQuery) {
 	// Answer callback to remove loading state
 	b.api.Request(tgbotapi.NewCallback(callback.ID, ""))
 
-	// Handle language selection
+	// Handle interface language selection (for user preferences)
+	if strings.HasPrefix(data, "interface_lang:") {
+		langStr := strings.TrimPrefix(data, "interface_lang:")
+		lang := Language(langStr)
+		username := callback.From.UserName
+		if err := b.setUserInterfaceLanguage(userID, username, lang); err != nil {
+			log.Printf("Error setting interface language: %v", err)
+		}
+		m := GetMessages(lang)
+		b.sendMessage(chatID, m.LanguageSet+"\n\n"+m.Welcome)
+		return
+	}
+
+	// Handle job language selection (for job creation flow)
 	if strings.HasPrefix(data, "lang:") {
 		langStr := strings.TrimPrefix(data, "lang:")
 		lang := Language(langStr)
@@ -372,7 +644,13 @@ func (b *Bot) handleCallback(callback *tgbotapi.CallbackQuery) {
 
 	// Handle level selection
 	if strings.HasPrefix(data, "level:") {
-		level := domain.JobLevel(strings.TrimPrefix(data, "level:"))
+		levelStr := strings.TrimPrefix(data, "level:")
+		var level domain.JobLevel
+		if levelStr == "skip" {
+			level = domain.JobLevelSkip // empty string
+		} else {
+			level = domain.JobLevel(levelStr)
+		}
 		b.fsm.UpdateDraft(userID, func(d *JobDraft) {
 			d.Level = level
 		})
@@ -460,7 +738,7 @@ func (b *Bot) submitJob(callback *tgbotapi.CallbackQuery) {
 }
 
 func isValidLevel(level domain.JobLevel) bool {
-	return level == domain.JobLevelJunior || level == domain.JobLevelMiddle || level == domain.JobLevelSenior
+	return level == domain.JobLevelJunior || level == domain.JobLevelMiddle || level == domain.JobLevelSenior || level == domain.JobLevelInternship
 }
 
 func isValidType(t domain.JobType) bool {

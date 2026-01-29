@@ -20,7 +20,7 @@ func NewCleanupService(jobRepo *repository.JobRepository, publisher service.Publ
 	return &CleanupService{
 		jobRepo:   jobRepo,
 		publisher: publisher,
-		interval:  1 * time.Hour, // Проверяем каждый час
+		interval:  1 * time.Hour,
 		maxDays:   maxDays,
 	}
 }

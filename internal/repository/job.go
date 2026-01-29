@@ -205,3 +205,71 @@ func (r *JobRepository) GetExpiredJobs(ctx context.Context, days int) ([]domain.
 	}
 	return jobs, nil
 }
+
+func (r *JobRepository) GetByUserTelegramID(ctx context.Context, telegramID int64) ([]domain.Job, error) {
+	query := `
+		SELECT j.id, j.company_id, j.title, j.level, j.type, j.category, j.salary_from, j.salary_to, j.description, j.apply_link, j.status, j.language, j.channel_message_id, j.published_at, j.created_at
+		FROM jobs j
+		JOIN companies c ON j.company_id = c.id
+		JOIN users u ON c.user_id = u.id
+		WHERE u.telegram_id = $1
+		ORDER BY j.created_at DESC
+		LIMIT 20
+	`
+	rows, err := r.db.Pool.Query(ctx, query, telegramID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var jobs []domain.Job
+	for rows.Next() {
+		var job domain.Job
+		err := rows.Scan(
+			&job.ID,
+			&job.CompanyID,
+			&job.Title,
+			&job.Level,
+			&job.Type,
+			&job.Category,
+			&job.SalaryFrom,
+			&job.SalaryTo,
+			&job.Description,
+			&job.ApplyLink,
+			&job.Status,
+			&job.Language,
+			&job.ChannelMessageID,
+			&job.PublishedAt,
+			&job.CreatedAt,
+		)
+		if err != nil {
+			return nil, err
+		}
+		jobs = append(jobs, job)
+	}
+	return jobs, nil
+}
+
+func (r *JobRepository) GetStats(ctx context.Context) (*domain.Stats, error) {
+	query := `
+		SELECT
+			COUNT(*) as total,
+			COUNT(*) FILTER (WHERE status = 'pending') as pending,
+			COUNT(*) FILTER (WHERE status = 'published') as published,
+			COUNT(*) FILTER (WHERE status = 'rejected') as rejected,
+			COUNT(*) FILTER (WHERE status = 'archived') as archived
+		FROM jobs
+	`
+	var stats domain.Stats
+	err := r.db.Pool.QueryRow(ctx, query).Scan(
+		&stats.Total,
+		&stats.Pending,
+		&stats.Published,
+		&stats.Rejected,
+		&stats.Archived,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return &stats, nil
+}

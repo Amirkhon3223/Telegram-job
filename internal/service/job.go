@@ -192,3 +192,11 @@ func (s *JobService) ArchiveJob(ctx context.Context, jobID uuid.UUID, adminTeleg
 func (s *JobService) GetJob(ctx context.Context, jobID uuid.UUID) (*domain.Job, error) {
 	return s.jobRepo.GetByID(ctx, jobID)
 }
+
+func (s *JobService) GetUserJobs(ctx context.Context, telegramID int64) ([]domain.Job, error) {
+	return s.jobRepo.GetByUserTelegramID(ctx, telegramID)
+}
+
+func (s *JobService) GetStats(ctx context.Context) (*domain.Stats, error) {
+	return s.jobRepo.GetStats(ctx)
+}
