@@ -39,7 +39,7 @@ func (n *AdminNotifier) NotifyNewJob(ctx context.Context, post *domain.PostWithD
 	}
 	if strings.HasPrefix(contact, "@") {
 		keyboardRows = append(keyboardRows, tgbotapi.NewInlineKeyboardRow(
-			tgbotapi.NewInlineKeyboardButtonURL("📞 Связаться с автором", "https://t.me/"+strings.TrimPrefix(contact, "@")),
+			tgbotapi.NewInlineKeyboardButtonURL("📞 Contact Author", "https://t.me/"+strings.TrimPrefix(contact, "@")),
 		))
 	}
 
@@ -173,18 +173,18 @@ func escapeMarkdownAdmin(s string) string {
 }
 
 func formatAdminNotification(post *domain.PostWithDetails) string {
-	salary := "Не указана"
+	salary := "Not specified"
 	if post.SalaryFrom != nil && post.SalaryTo != nil {
 		salary = fmt.Sprintf("$%d – $%d", *post.SalaryFrom, *post.SalaryTo)
 	} else if post.SalaryFrom != nil {
-		salary = fmt.Sprintf("От $%d", *post.SalaryFrom)
+		salary = fmt.Sprintf("From $%d", *post.SalaryFrom)
 	} else if post.SalaryTo != nil {
-		salary = fmt.Sprintf("До $%d", *post.SalaryTo)
+		salary = fmt.Sprintf("Up to $%d", *post.SalaryTo)
 	}
 
 	levelDisplay := string(post.Level)
 	if post.Level == "" {
-		levelDisplay = "Не указан"
+		levelDisplay = "Not specified"
 	}
 
 	langDisplay := "🇷🇺 RU"
@@ -194,30 +194,30 @@ func formatAdminNotification(post *domain.PostWithDetails) string {
 
 	// Resume format
 	if post.PostType == domain.PostTypeResume {
-		experience := "Не указан"
+		experience := "Not specified"
 		if post.ExperienceYears != nil {
-			experience = fmt.Sprintf("%.1f лет", *post.ExperienceYears)
+			experience = fmt.Sprintf("%.1f years", *post.ExperienceYears)
 		}
 
 		contact := post.Contact
-		resumeLink := "Не указана"
+		resumeLink := "Not specified"
 		if post.ResumeLink != "" {
 			resumeLink = post.ResumeLink
 		}
 
-		return fmt.Sprintf(`👤 *Новое резюме на модерацию*
+		return fmt.Sprintf(`👤 *New Resume for Moderation*
 
-🌐 *Язык:* %s
-💼 *Позиция:* %s
-📊 *Уровень:* %s
-⏱ *Опыт:* %s
-🌍 *Формат:* %s
-🕒 *Занятость:* %s
-💰 *Ожидания:* %s
-📄 *Ссылка на резюме:* %s
-📞 *Контакт:* %s
+🌐 *Language:* %s
+💼 *Position:* %s
+📊 *Level:* %s
+⏱ *Experience:* %s
+🌍 *Format:* %s
+🕒 *Employment:* %s
+💰 *Expectations:* %s
+📄 *Resume link:* %s
+📞 *Contact:* %s
 
-🧑‍💻 *О кандидате:*
+🧑‍💻 *About:*
 %s
 
 ———
@@ -237,19 +237,19 @@ Resume ID: `+"`%s`",
 	}
 
 	// Vacancy format
-	return fmt.Sprintf(`🏢 *Новая вакансия на модерацию*
+	return fmt.Sprintf(`🏢 *New Vacancy for Moderation*
 
-🌐 *Язык:* %s
-🏢 *Компания:* %s
-💼 *Должность:* %s
-📊 *Уровень:* %s
-🌍 *Формат:* %s
-🏷️ *Категория:* %s
-💰 *Зарплата:* %s
-🔗 *Ссылка для кандидатов:* %s
-📞 *Контакт автора:* %s
+🌐 *Language:* %s
+🏢 *Company:* %s
+💼 *Position:* %s
+📊 *Level:* %s
+🌍 *Format:* %s
+🏷️ *Category:* %s
+💰 *Salary:* %s
+🔗 *Apply link:* %s
+📞 *Author contact:* %s
 
-📝 *Описание:*
+📝 *Description:*
 %s
 
 ———
@@ -309,10 +309,10 @@ func (b *Bot) handleAdminCallback(callback *tgbotapi.CallbackQuery) {
 		}
 
 		// Обновляем сообщение с кнопкой удаления
-		newText := callback.Message.Text + "\n\n✅ ОДОБРЕНО И ОПУБЛИКОВАНО"
+		newText := callback.Message.Text + "\n\n✅ APPROVED & PUBLISHED"
 		deleteKeyboard := tgbotapi.NewInlineKeyboardMarkup(
 			tgbotapi.NewInlineKeyboardRow(
-				tgbotapi.NewInlineKeyboardButtonData("🗑 Удалить из канала", "delete:"+jobIDStr),
+				tgbotapi.NewInlineKeyboardButtonData("🗑 Delete from channel", "delete:"+jobIDStr),
 			),
 		)
 		edit := tgbotapi.NewEditMessageTextAndMarkup(chatID, messageID, newText, deleteKeyboard)
@@ -349,9 +349,9 @@ func (b *Bot) handleAdminCallback(callback *tgbotapi.CallbackQuery) {
 		}
 
 		// Обновляем сообщение без кнопок
-		newText := callback.Message.Text + "\n\n❌ ОТКЛОНЕНО"
-		emptyKeyboard := tgbotapi.NewInlineKeyboardMarkup()
-		edit := tgbotapi.NewEditMessageTextAndMarkup(chatID, messageID, newText, emptyKeyboard)
+		newText := callback.Message.Text + "\n\n❌ REJECTED"
+		edit := tgbotapi.NewEditMessageText(chatID, messageID, newText)
+		edit.ParseMode = "Markdown"
 		_, err = b.api.Send(edit)
 		if err != nil {
 			log.Printf("Error editing message after reject: %v", err)
@@ -372,13 +372,13 @@ func (b *Bot) handleAdminCallback(callback *tgbotapi.CallbackQuery) {
 
 		confirmKeyboard := tgbotapi.NewInlineKeyboardMarkup(
 			tgbotapi.NewInlineKeyboardRow(
-				tgbotapi.NewInlineKeyboardButtonData("✅ Да, удалить", "confirm_delete:"+jobIDStr),
-				tgbotapi.NewInlineKeyboardButtonData("❌ Отмена", "cancel_delete:"+jobIDStr),
+				tgbotapi.NewInlineKeyboardButtonData("✅ Yes, delete", "confirm_delete:"+jobIDStr),
+				tgbotapi.NewInlineKeyboardButtonData("❌ Cancel", "cancel_delete:"+jobIDStr),
 			),
 		)
 
 		// Добавляем предупреждение в текст сообщения
-		newText := callback.Message.Text + "\n\n⚠️ Вы уверены, что хотите удалить?"
+		newText := callback.Message.Text + "\n\n⚠️ Are you sure you want to delete?"
 		edit := tgbotapi.NewEditMessageTextAndMarkup(chatID, messageID, newText, confirmKeyboard)
 		_, err := b.api.Send(edit)
 		if err != nil {
@@ -412,8 +412,8 @@ func (b *Bot) handleAdminCallback(callback *tgbotapi.CallbackQuery) {
 
 		// Убираем предупреждение из текста и добавляем статус удаления
 		originalText := callback.Message.Text
-		originalText = strings.Replace(originalText, "\n\n⚠️ Вы уверены, что хотите удалить?", "", 1)
-		newText := originalText + "\n\n🗑 УДАЛЕНО ИЗ КАНАЛА"
+		originalText = strings.Replace(originalText, "\n\n⚠️ Are you sure you want to delete?", "", 1)
+		newText := originalText + "\n\n🗑 DELETED FROM CHANNEL"
 
 		// Редактируем сообщение без кнопок
 		edit := tgbotapi.NewEditMessageText(chatID, messageID, newText)
@@ -437,12 +437,12 @@ func (b *Bot) handleAdminCallback(callback *tgbotapi.CallbackQuery) {
 
 		// Убираем предупреждение из текста
 		originalText := callback.Message.Text
-		originalText = strings.Replace(originalText, "\n\n⚠️ Вы уверены, что хотите удалить?", "", 1)
+		originalText = strings.Replace(originalText, "\n\n⚠️ Are you sure you want to delete?", "", 1)
 
 		// Возвращаем кнопку удаления
 		deleteKeyboard := tgbotapi.NewInlineKeyboardMarkup(
 			tgbotapi.NewInlineKeyboardRow(
-				tgbotapi.NewInlineKeyboardButtonData("🗑 Удалить из канала", "delete:"+jobIDStr),
+				tgbotapi.NewInlineKeyboardButtonData("🗑 Delete from channel", "delete:"+jobIDStr),
 			),
 		)
 		edit := tgbotapi.NewEditMessageTextAndMarkup(chatID, messageID, originalText, deleteKeyboard)

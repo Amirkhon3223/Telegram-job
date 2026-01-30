@@ -1,8 +1,8 @@
 -- Add post type enum
 CREATE TYPE post_type AS ENUM ('vacancy', 'resume');
 
--- Add employment type enum for resumes
-CREATE TYPE employment_type AS ENUM ('full-time', 'part-time', 'contract', 'freelance');
+-- Add employment type enum for resumes (includes empty for vacancies)
+CREATE TYPE employment_type AS ENUM ('full-time', 'part-time', 'contract', 'freelance', '');
 
 -- Rename jobs table to posts
 ALTER TABLE jobs RENAME TO posts;
@@ -16,6 +16,12 @@ ALTER TABLE posts ADD COLUMN post_type post_type NOT NULL DEFAULT 'vacancy';
 
 -- Make company_id nullable (resumes don't have companies)
 ALTER TABLE posts ALTER COLUMN company_id DROP NOT NULL;
+
+-- Make vacancy-specific fields nullable (resumes don't use them)
+ALTER TABLE posts ALTER COLUMN description DROP NOT NULL;
+ALTER TABLE posts ALTER COLUMN apply_link DROP NOT NULL;
+ALTER TABLE posts ALTER COLUMN category DROP NOT NULL;
+
 
 -- Add resume-specific fields
 ALTER TABLE posts ADD COLUMN experience_years NUMERIC(3,1);  -- e.g. 1.5 years

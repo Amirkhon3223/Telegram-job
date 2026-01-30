@@ -1,7 +1,7 @@
 -- Enum types
 CREATE TYPE job_level AS ENUM ('junior', 'middle', 'senior', 'internship', '');
 CREATE TYPE job_type AS ENUM ('remote', 'hybrid', 'onsite');
-CREATE TYPE job_category AS ENUM ('web2', 'web3', 'dev');
+CREATE TYPE job_category AS ENUM ('web2', 'web3', 'dev', '');
 CREATE TYPE job_status AS ENUM ('draft', 'pending', 'approved', 'published', 'rejected', 'archived');
 CREATE TYPE user_role AS ENUM ('admin', 'recruiter');
 CREATE TYPE payment_status AS ENUM ('pending', 'paid', 'failed');
@@ -38,7 +38,7 @@ CREATE TABLE jobs (
     description TEXT NOT NULL,
     apply_link TEXT NOT NULL,
     status job_status NOT NULL DEFAULT 'draft',
-    language TEXT NOT NULL DEFAULT 'ru',
+    language TEXT NOT NULL DEFAULT 'en',
     channel_message_id INT,
     published_at TIMESTAMPTZ,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
