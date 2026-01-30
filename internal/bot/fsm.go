@@ -130,7 +130,7 @@ func (f *FSM) GetLanguage(userID int64) Language {
 	if state, ok := f.states[userID]; ok {
 		return state.Language
 	}
-	return LangRU // default
+	return LangEN // default to English
 }
 
 func (f *FSM) SetPostType(userID int64, postType domain.PostType) {

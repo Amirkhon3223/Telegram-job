@@ -58,13 +58,13 @@ func escapeMarkdown(s string) string {
 }
 
 func formatJobPost(post *domain.PostWithDetails) string {
-	salary := "Не указана"
+	salary := "Not specified"
 	if post.SalaryFrom != nil && post.SalaryTo != nil {
 		salary = fmt.Sprintf("$%d – $%d", *post.SalaryFrom, *post.SalaryTo)
 	} else if post.SalaryFrom != nil {
-		salary = fmt.Sprintf("От $%d", *post.SalaryFrom)
+		salary = fmt.Sprintf("From $%d", *post.SalaryFrom)
 	} else if post.SalaryTo != nil {
-		salary = fmt.Sprintf("До $%d", *post.SalaryTo)
+		salary = fmt.Sprintf("Up to $%d", *post.SalaryTo)
 	}
 
 	levelEmoji := map[domain.JobLevel]string{
@@ -77,7 +77,7 @@ func formatJobPost(post *domain.PostWithDetails) string {
 
 	levelDisplay := string(post.Level)
 	if post.Level == "" {
-		levelDisplay = "Не указан"
+		levelDisplay = "Not specified"
 	}
 
 	typeEmoji := map[domain.JobType]string{
@@ -92,23 +92,23 @@ func formatJobPost(post *domain.PostWithDetails) string {
 		domain.JobCategoryDev:  "💻",
 	}
 
-	return fmt.Sprintf(`#vacancy #вакансия
+	return fmt.Sprintf(`#vacancy #job
 
-*Вакансия: %s*
+*%s*
 
-🏢 *Компания:* %s
-%s *Уровень:* %s
-%s *Формат:* %s
-%s *Категория:* %s
-💰 *Зарплата:* %s
+🏢 *Company:* %s
+%s *Level:* %s
+%s *Format:* %s
+%s *Category:* %s
+💰 *Salary:* %s
 
-📝 *Описание:*
+📝 *Description:*
 %s
 
-🔗 *Откликнуться:* %s
+🔗 *Apply:* %s
 
 ———
-📮 _Разместить вакансию: @BridgeJobsBot_`,
+📮 _Post a job: @BridgeJobsBot_`,
 		escapeMarkdown(post.Title),
 		escapeMarkdown(post.CompanyName),
 		levelEmoji[post.Level], levelDisplay,
@@ -121,13 +121,13 @@ func formatJobPost(post *domain.PostWithDetails) string {
 }
 
 func formatResumePost(post *domain.PostWithDetails) string {
-	salary := "Не указаны"
+	salary := "Not specified"
 	if post.SalaryFrom != nil && post.SalaryTo != nil {
 		salary = fmt.Sprintf("$%d – $%d", *post.SalaryFrom, *post.SalaryTo)
 	} else if post.SalaryFrom != nil {
-		salary = fmt.Sprintf("От $%d", *post.SalaryFrom)
+		salary = fmt.Sprintf("From $%d", *post.SalaryFrom)
 	} else if post.SalaryTo != nil {
-		salary = fmt.Sprintf("До $%d", *post.SalaryTo)
+		salary = fmt.Sprintf("Up to $%d", *post.SalaryTo)
 	}
 
 	levelEmoji := map[domain.JobLevel]string{
@@ -140,7 +140,7 @@ func formatResumePost(post *domain.PostWithDetails) string {
 
 	levelDisplay := string(post.Level)
 	if post.Level == "" {
-		levelDisplay = "Не указан"
+		levelDisplay = "Not specified"
 	}
 
 	typeEmoji := map[domain.JobType]string{
@@ -151,36 +151,36 @@ func formatResumePost(post *domain.PostWithDetails) string {
 
 	employmentDisplay := string(post.Employment)
 	if post.Employment == "" {
-		employmentDisplay = "Не указана"
+		employmentDisplay = "Not specified"
 	}
 
-	experience := "Не указан"
+	experience := "Not specified"
 	if post.ExperienceYears != nil {
-		experience = fmt.Sprintf("%.1f лет", *post.ExperienceYears)
+		experience = fmt.Sprintf("%.1f years", *post.ExperienceYears)
 	}
 
 	resumeLink := ""
 	if post.ResumeLink != "" {
-		resumeLink = fmt.Sprintf("\n📄 *Резюме:* %s", post.ResumeLink)
+		resumeLink = fmt.Sprintf("\n📄 *Resume:* %s", post.ResumeLink)
 	}
 
-	return fmt.Sprintf(`#resume #резюме
+	return fmt.Sprintf(`#resume #cv
 
-*Резюме: %s*
+*%s*
 
-%s *Уровень:* %s
-⏱ *Опыт:* %s
-%s *Формат:* %s
-🕒 *Занятость:* %s
-💰 *Ожидания:* %s
+%s *Level:* %s
+⏱ *Experience:* %s
+%s *Format:* %s
+🕒 *Employment:* %s
+💰 *Expectations:* %s
 
-🧑‍💻 *О кандидате:*
+🧑‍💻 *About:*
 %s
 %s
-🔗 *Контакт:* %s
+🔗 *Contact:* %s
 
 ———
-📮 _Разместить резюме: @BridgeJobsBot_`,
+📮 _Post a resume: @BridgeJobsBot_`,
 		escapeMarkdown(post.Title),
 		levelEmoji[post.Level], levelDisplay,
 		experience,

@@ -58,27 +58,12 @@ func (b *Bot) handleCommand(msg *tgbotapi.Message) {
 }
 
 func (b *Bot) cmdStart(msg *tgbotapi.Message) {
-	lang := b.getUserInterfaceLanguage(msg.From.ID)
+	// Ensure user exists in DB with default 'en' language
+	ctx := context.Background()
+	_, _ = b.userRepo.GetOrCreate(ctx, msg.From.ID, msg.From.UserName)
 
-	if lang == "" {
-		text := `👋 *Добро пожаловать! / Welcome!*
-
-Это сервис для публикации вакансий и резюме.
-This is a job and resume posting service.
-
-Пожалуйста, выберите язык / Please choose your language:`
-
-		keyboard := tgbotapi.NewInlineKeyboardMarkup(
-			tgbotapi.NewInlineKeyboardRow(
-				tgbotapi.NewInlineKeyboardButtonData("🇷🇺 Русский", "interface_lang:ru"),
-				tgbotapi.NewInlineKeyboardButtonData("🇬🇧 English", "interface_lang:en"),
-			),
-		)
-		b.sendMessageWithKeyboard(msg.Chat.ID, text, keyboard)
-		return
-	}
-
-	m := GetMessages(lang)
+	// Get user's language (defaults to 'en')
+	m := b.getInterfaceMessages(msg.From.ID)
 	b.sendMessage(msg.Chat.ID, m.Welcome)
 }
 
@@ -89,8 +74,8 @@ func (b *Bot) cmdPostJob(msg *tgbotapi.Message) {
 
 	keyboard := tgbotapi.NewInlineKeyboardMarkup(
 		tgbotapi.NewInlineKeyboardRow(
-			tgbotapi.NewInlineKeyboardButtonData(m.BtnVacancy, "post_type:vacancy"),
-			tgbotapi.NewInlineKeyboardButtonData(m.BtnResume, "post_type:resume"),
+			tgbotapi.NewInlineKeyboardButtonData(ButtonLabels.Vacancy, "post_type:vacancy"),
+			tgbotapi.NewInlineKeyboardButtonData(ButtonLabels.Resume, "post_type:resume"),
 		),
 	)
 	b.sendMessageWithKeyboard(msg.Chat.ID, m.ChoosePostType, keyboard)
@@ -101,7 +86,7 @@ func (b *Bot) cmdCancel(msg *tgbotapi.Message) {
 	if lang == "" {
 		lang = b.getUserInterfaceLanguage(msg.From.ID)
 		if lang == "" {
-			lang = LangRU
+			lang = LangEN
 		}
 	}
 	m := GetMessages(lang)
@@ -113,8 +98,8 @@ func (b *Bot) cmdLanguage(msg *tgbotapi.Message) {
 	m := b.getInterfaceMessages(msg.From.ID)
 	keyboard := tgbotapi.NewInlineKeyboardMarkup(
 		tgbotapi.NewInlineKeyboardRow(
-			tgbotapi.NewInlineKeyboardButtonData("🇷🇺 Русский", "interface_lang:ru"),
-			tgbotapi.NewInlineKeyboardButtonData("🇬🇧 English", "interface_lang:en"),
+			tgbotapi.NewInlineKeyboardButtonData(ButtonLabels.Russian, "interface_lang:ru"),
+			tgbotapi.NewInlineKeyboardButtonData(ButtonLabels.English, "interface_lang:en"),
 		),
 	)
 	b.sendMessageWithKeyboard(msg.Chat.ID, m.ChooseLanguage, keyboard)
@@ -367,11 +352,7 @@ func (b *Bot) handleMessage(msg *tgbotapi.Message) {
 		return
 
 	case StateWaitPostType:
-		b.sendMessage(msg.Chat.ID, "Please select using buttons above.\nВыберите кнопками выше.")
-		return
-
-	case StateWaitLanguage:
-		b.sendMessage(msg.Chat.ID, "Please select language using buttons above.\nВыберите язык кнопками выше.")
+		b.sendMessage(msg.Chat.ID, "Please select using buttons above.")
 		return
 
 	// ==================== VACANCY STATES ====================
@@ -585,28 +566,26 @@ func (b *Bot) handleMessage(msg *tgbotapi.Message) {
 // ==================== KEYBOARDS ====================
 
 func (b *Bot) sendLevelKeyboard(chatID int64, lang Language, prompt string) {
-	m := GetMessages(lang)
 	keyboard := tgbotapi.NewInlineKeyboardMarkup(
 		tgbotapi.NewInlineKeyboardRow(
-			tgbotapi.NewInlineKeyboardButtonData(m.LevelJunior, "level:junior"),
-			tgbotapi.NewInlineKeyboardButtonData(m.LevelMiddle, "level:middle"),
-			tgbotapi.NewInlineKeyboardButtonData(m.LevelSenior, "level:senior"),
+			tgbotapi.NewInlineKeyboardButtonData(ButtonLabels.Junior, "level:junior"),
+			tgbotapi.NewInlineKeyboardButtonData(ButtonLabels.Middle, "level:middle"),
+			tgbotapi.NewInlineKeyboardButtonData(ButtonLabels.Senior, "level:senior"),
 		),
 		tgbotapi.NewInlineKeyboardRow(
-			tgbotapi.NewInlineKeyboardButtonData(m.LevelInternship, "level:internship"),
-			tgbotapi.NewInlineKeyboardButtonData(m.LevelSkip, "level:skip"),
+			tgbotapi.NewInlineKeyboardButtonData(ButtonLabels.Internship, "level:internship"),
+			tgbotapi.NewInlineKeyboardButtonData(ButtonLabels.SkipLevel, "level:skip"),
 		),
 	)
 	b.sendMessageWithKeyboard(chatID, prompt, keyboard)
 }
 
 func (b *Bot) sendTypeKeyboard(chatID int64, lang Language, prompt string) {
-	m := GetMessages(lang)
 	keyboard := tgbotapi.NewInlineKeyboardMarkup(
 		tgbotapi.NewInlineKeyboardRow(
-			tgbotapi.NewInlineKeyboardButtonData(m.TypeRemote, "type:remote"),
-			tgbotapi.NewInlineKeyboardButtonData(m.TypeHybrid, "type:hybrid"),
-			tgbotapi.NewInlineKeyboardButtonData(m.TypeOnsite, "type:onsite"),
+			tgbotapi.NewInlineKeyboardButtonData(ButtonLabels.Remote, "type:remote"),
+			tgbotapi.NewInlineKeyboardButtonData(ButtonLabels.Hybrid, "type:hybrid"),
+			tgbotapi.NewInlineKeyboardButtonData(ButtonLabels.Onsite, "type:onsite"),
 		),
 	)
 	b.sendMessageWithKeyboard(chatID, prompt, keyboard)
@@ -616,11 +595,11 @@ func (b *Bot) sendCategoryKeyboard(chatID int64, lang Language) {
 	m := GetMessages(lang)
 	keyboard := tgbotapi.NewInlineKeyboardMarkup(
 		tgbotapi.NewInlineKeyboardRow(
-			tgbotapi.NewInlineKeyboardButtonData(m.CategoryDev, "category:dev"),
+			tgbotapi.NewInlineKeyboardButtonData(ButtonLabels.Other, "category:dev"),
 		),
 		tgbotapi.NewInlineKeyboardRow(
-			tgbotapi.NewInlineKeyboardButtonData(m.CategoryWeb2, "category:web2"),
-			tgbotapi.NewInlineKeyboardButtonData(m.CategoryWeb3, "category:web3"),
+			tgbotapi.NewInlineKeyboardButtonData(ButtonLabels.Web2, "category:web2"),
+			tgbotapi.NewInlineKeyboardButtonData(ButtonLabels.Web3, "category:web3"),
 		),
 	)
 	b.sendMessageWithKeyboard(chatID, m.VacStep6Category, keyboard)
@@ -630,12 +609,12 @@ func (b *Bot) sendEmploymentKeyboard(chatID int64, lang Language) {
 	m := GetMessages(lang)
 	keyboard := tgbotapi.NewInlineKeyboardMarkup(
 		tgbotapi.NewInlineKeyboardRow(
-			tgbotapi.NewInlineKeyboardButtonData(m.EmploymentFullTime, "employment:full-time"),
-			tgbotapi.NewInlineKeyboardButtonData(m.EmploymentPartTime, "employment:part-time"),
+			tgbotapi.NewInlineKeyboardButtonData(ButtonLabels.FullTime, "employment:full-time"),
+			tgbotapi.NewInlineKeyboardButtonData(ButtonLabels.PartTime, "employment:part-time"),
 		),
 		tgbotapi.NewInlineKeyboardRow(
-			tgbotapi.NewInlineKeyboardButtonData(m.EmploymentContract, "employment:contract"),
-			tgbotapi.NewInlineKeyboardButtonData(m.EmploymentFreelance, "employment:freelance"),
+			tgbotapi.NewInlineKeyboardButtonData(ButtonLabels.Contract, "employment:contract"),
+			tgbotapi.NewInlineKeyboardButtonData(ButtonLabels.Freelance, "employment:freelance"),
 		),
 	)
 	b.sendMessageWithKeyboard(chatID, m.ResStep5Employment, keyboard)
@@ -645,7 +624,7 @@ func (b *Bot) sendResumeLinkStep(chatID int64, lang Language) {
 	m := GetMessages(lang)
 	keyboard := tgbotapi.NewInlineKeyboardMarkup(
 		tgbotapi.NewInlineKeyboardRow(
-			tgbotapi.NewInlineKeyboardButtonData(m.BtnSkip, "resume_link:skip"),
+			tgbotapi.NewInlineKeyboardButtonData(ButtonLabels.Skip, "resume_link:skip"),
 		),
 	)
 	b.sendMessageWithKeyboard(chatID, m.ResStep10Link, keyboard)
@@ -709,8 +688,8 @@ func (b *Bot) sendVacancyPreview(chatID int64, userID int64) {
 
 	keyboard := tgbotapi.NewInlineKeyboardMarkup(
 		tgbotapi.NewInlineKeyboardRow(
-			tgbotapi.NewInlineKeyboardButtonData(m.BtnSubmit, "submit"),
-			tgbotapi.NewInlineKeyboardButtonData(m.BtnCancel, "cancel_submit"),
+			tgbotapi.NewInlineKeyboardButtonData(ButtonLabels.Submit, "submit"),
+			tgbotapi.NewInlineKeyboardButtonData(ButtonLabels.Cancel, "cancel_submit"),
 		),
 	)
 
@@ -788,8 +767,8 @@ func (b *Bot) sendResumePreview(chatID int64, userID int64) {
 
 	keyboard := tgbotapi.NewInlineKeyboardMarkup(
 		tgbotapi.NewInlineKeyboardRow(
-			tgbotapi.NewInlineKeyboardButtonData(m.BtnSubmit, "submit_resume"),
-			tgbotapi.NewInlineKeyboardButtonData(m.BtnCancel, "cancel_submit"),
+			tgbotapi.NewInlineKeyboardButtonData(ButtonLabels.Submit, "submit_resume"),
+			tgbotapi.NewInlineKeyboardButtonData(ButtonLabels.Cancel, "cancel_submit"),
 		),
 	)
 
@@ -823,33 +802,21 @@ func (b *Bot) handleCallback(callback *tgbotapi.CallbackQuery) {
 		return
 	}
 
-	// Post type selection
+	// Post type selection - go directly to first step (use interface_language for post)
 	if strings.HasPrefix(data, "post_type:") {
 		postTypeStr := strings.TrimPrefix(data, "post_type:")
 		postType := domain.PostType(postTypeStr)
 		b.fsm.SetPostType(userID, postType)
-		b.fsm.SetState(userID, StateWaitLanguage)
 
-		m := b.getInterfaceMessages(userID)
-		keyboard := tgbotapi.NewInlineKeyboardMarkup(
-			tgbotapi.NewInlineKeyboardRow(
-				tgbotapi.NewInlineKeyboardButtonData("🇷🇺 Русский", "lang:ru"),
-				tgbotapi.NewInlineKeyboardButtonData("🇬🇧 English", "lang:en"),
-			),
-		)
-		b.sendMessageWithKeyboard(chatID, m.ChoosePostLanguage, keyboard)
-		return
-	}
+		// Use interface language for both FSM and post
+		interfaceLang := b.getUserInterfaceLanguage(userID)
+		if interfaceLang == "" {
+			interfaceLang = LangEN
+		}
+		b.fsm.SetLanguage(userID, interfaceLang)
+		b.fsm.UpdateDraft(userID, func(d *PostDraft) { d.Language = string(interfaceLang) })
 
-	// Post language selection
-	if strings.HasPrefix(data, "lang:") {
-		langStr := strings.TrimPrefix(data, "lang:")
-		lang := Language(langStr)
-		b.fsm.SetLanguage(userID, lang)
-		b.fsm.UpdateDraft(userID, func(d *PostDraft) { d.Language = langStr })
-
-		m := GetMessages(lang)
-		postType := b.fsm.GetPostType(userID)
+		m := GetMessages(interfaceLang)
 
 		if postType == domain.PostTypeResume {
 			b.fsm.SetState(userID, StateResumeWaitTitle)
