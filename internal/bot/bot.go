@@ -110,7 +110,7 @@ func (b *Bot) setUserInterfaceLanguage(telegramID int64, username string, lang L
 func (b *Bot) getInterfaceMessages(telegramID int64) Messages {
 	lang := b.getUserInterfaceLanguage(telegramID)
 	if lang == "" {
-		lang = LangRU // fallback
+		lang = LangEN // fallback to English
 	}
 	return GetMessages(lang)
 }

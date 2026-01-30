@@ -113,89 +113,84 @@ type Messages struct {
 
 var MessagesRU = Messages{
 	// Interface messages
-	Welcome: `👋 *Добро пожаловать в BridgeJob!*
+	Welcome: `👋 *Добро пожаловать!*
 
-Это сервис для публикации вакансий и резюме с ручной модерацией.
+Это платформа для публикации вакансий и резюме в сфере Web2 и Web3.
 
-*Что вы можете сделать:*
-• /post\_job — добавить вакансию или резюме
-• /myjobs — посмотреть свои публикации
-• /pricing — узнать цены
-• /help — справка
+Вы можете:
+• Размещать вакансии
+• Публиковать резюме
+• Отслеживать статус публикаций
 
-📢 Канал: @BridgeJob`,
-	Help: `📖 *Справка по боту*
+Используйте /help для списка команд.
+Сменить язык можно командой /language.`,
+	Help: `📖 *Справка*
 
 *Доступные команды:*
-• /post\_job — добавить вакансию или резюме
-• /myjobs — мои публикации и статусы
-• /pricing — стоимость размещения
-• /faq — частые вопросы
-• /about — о сервисе
-• /contact — связь с админом
-• /language — сменить язык
+• /post\_job — Разместить вакансию или резюме
+• /myjobs — Мои публикации и статусы
+• /pricing — Цены
+• /faq — Частые вопросы
+• /about — О сервисе
+• /contact — Связь с админом
+• /language — Сменить язык
 
-Если у вас есть вопросы — используйте /faq или /contact.`,
+Если есть вопросы — используйте /faq или /contact.`,
 	HelpAdmin: `
 
 👮 *Админ-команды:*
-• /pending — публикации на модерации
-• /stats — статистика
-• /admins — список админов`,
-	UnknownCommand:    "Неизвестная команда. Используйте /help для справки.",
-	LanguageSet:       "✅ Язык интерфейса установлен: Русский 🇷🇺",
-	ChooseLanguage:    "🌐 Выберите язык интерфейса:",
+• /pending — Публикации на модерации
+• /stats — Статистика
+• /admins — Список админов`,
+	UnknownCommand:     "Неизвестная команда. Используйте /help для справки.",
+	LanguageSet:        "✅ Язык установлен: Русский 🇷🇺",
+	ChooseLanguage:     "🌐 Выберите язык:",
 	ChoosePostLanguage: "🌐 Выберите язык публикации:",
-	NoPosts:           "У вас пока нет публикаций.\nИспользуйте /post\\_job, чтобы добавить первую.",
-	YourPosts:         "📄 *Ваши публикации:*",
-	NoPermission:      "⛔ Недостаточно прав",
-	NoPendingPosts:    "✅ Нет публикаций на модерации.",
-	PendingPostsCount: "📋 Публикаций на модерации: %d\n\nОтправляю по одной...",
-	StatsTitle:        "📊 *Статистика сервиса*",
+	NoPosts:            "У вас пока нет публикаций.\nИспользуйте /post\\_job, чтобы добавить первую.",
+	YourPosts:          "📄 *Ваши публикации:*",
+	NoPermission:       "⛔ Недостаточно прав",
+	NoPendingPosts:     "✅ Нет публикаций на модерации.",
+	PendingPostsCount:  "📋 Публикаций на модерации: %d\n\nОтправляю по одной...",
+	StatsTitle:         "📊 *Статистика сервиса*",
 	// FAQ, About, Pricing, Contact
 	FAQ: `❓ *Частые вопросы*
 
-*Как быстро публикуется вакансия/резюме?*
+• *Как быстро публикуются посты?*
 — Обычно в течение 24 часов после модерации.
 
-*Можно ли указать Telegram контакт?*
-— Да, @username допускается.
+• *Можно ли разместить резюме?*
+— Да. Резюме проходят ту же модерацию и тарификацию.
 
-*Обязательна ли вилка зарплаты?*
+• *Обязательна ли вилка зарплаты?*
 — Желательно, но не обязательно.
 
-*Как проходит оплата?*
-— После одобрения админ свяжется с вами.
+• *Можно ли указать Telegram как контакт?*
+— Да, @username допускается.
 
-*Можно ли прикрепить файл резюме?*
-— Нет, только ссылки (Google Docs, Notion и т.д.)`,
+• *Принимаете ли вы файлы?*
+— Нет. Только внешние ссылки на резюме.`,
 	About: `ℹ️ *О сервисе*
 
-Мы публикуем проверенные вакансии и резюме с ручной модерацией, чтобы сохранить качество канала.
+Мы публикуем проверенные вакансии и резюме с ручной модерацией для поддержания качества.
 
-Цель сервиса — соединять компании и специалистов без спама и скама.
+Платформа создана для:
+• Компаний и HR-менеджеров
+• Рекрутеров
+• Разработчиков и IT-специалистов
 
-📢 Канал: @BridgeJob`,
-	Pricing: `💰 *Стоимость размещения*
+Без спама. Без скама. Качество прежде всего.`,
+	Pricing: `💰 *Цены*
 
-📌 *Стандартное размещение* — *$25*
-1 пост в канале (вакансия или резюме)
+• *Стандартный пост* — $25
+• *Featured (закреп 48ч)* — $70
+• Пакеты по запросу
 
-⭐ *Featured* — *$65*
-Пост + закреп 48ч
+Оплата запрашивается после одобрения модерацией.`,
+	Contact: `📩 *Контакты*
 
-📦 *Пакет 5 публикаций* — *$100*
-5 стандартных постов
-
-💳 *Оплата:* USDT / Wise / PayPal
-
-📞 *Контакт:* @amirichinvoker | @manizha\_ash`,
-	Contact: `📩 *Связь с администратором:*
-
-👤 @amirichinvoker
-👤 @manizha\_ash
-
-📢 Канал: @BridgeJob`,
+По вопросам и сотрудничеству:
+@amirichinvoker
+@manizha\_ash`,
 
 	// Post type selection
 	ChoosePostType: "Что вы хотите опубликовать?",
@@ -289,89 +284,84 @@ var MessagesRU = Messages{
 
 var MessagesEN = Messages{
 	// Interface messages
-	Welcome: `👋 *Welcome to BridgeJob!*
+	Welcome: `👋 *Welcome!*
 
-This is a service for posting jobs and resumes with manual moderation.
+This is a job & resume publishing platform for Web2 and Web3 roles.
 
-*What you can do:*
-• /post\_job — add a job or resume
-• /myjobs — view your posts
-• /pricing — see prices
-• /help — help
+You can:
+• Post job vacancies
+• Publish candidate resumes
+• Track your submissions
 
-📢 Channel: @BridgeJob`,
-	Help: `📖 *Bot Help*
+Use /help to see available commands.
+You can change language anytime with /language.`,
+	Help: `📖 *Help*
 
 *Available commands:*
-• /post\_job — add a job or resume
-• /myjobs — my posts and statuses
-• /pricing — posting prices
-• /faq — FAQ
-• /about — about service
-• /contact — contact admin
-• /language — change language
+• /post\_job — Post a job or resume
+• /myjobs — My posts & statuses
+• /pricing — Pricing
+• /faq — Frequently asked questions
+• /about — About the service
+• /contact — Contact admin
+• /language — Change language
 
-If you have questions — use /faq or /contact.`,
+If you have any questions — use /faq or /contact.`,
 	HelpAdmin: `
 
 👮 *Admin commands:*
-• /pending — posts awaiting moderation
-• /stats — statistics
-• /admins — list of admins`,
-	UnknownCommand:    "Unknown command. Use /help for help.",
-	LanguageSet:       "✅ Interface language set to: English 🇬🇧",
-	ChooseLanguage:    "🌐 Choose interface language:",
+• /pending — Posts awaiting moderation
+• /stats — Statistics
+• /admins — List of admins`,
+	UnknownCommand:     "Unknown command. Use /help for help.",
+	LanguageSet:        "✅ Language set to: English 🇬🇧",
+	ChooseLanguage:     "🌐 Choose language:",
 	ChoosePostLanguage: "🌐 Choose post language:",
-	NoPosts:           "You don't have any posts yet.\nUse /post\\_job to add your first one.",
-	YourPosts:         "📄 *Your posts:*",
-	NoPermission:      "⛔ Access denied",
-	NoPendingPosts:    "✅ No posts awaiting moderation.",
-	PendingPostsCount: "📋 Posts awaiting moderation: %d\n\nSending one by one...",
-	StatsTitle:        "📊 *Service Statistics*",
+	NoPosts:            "You don't have any posts yet.\nUse /post\\_job to add your first one.",
+	YourPosts:          "📄 *Your posts:*",
+	NoPermission:       "⛔ Access denied",
+	NoPendingPosts:     "✅ No posts awaiting moderation.",
+	PendingPostsCount:  "📋 Posts awaiting moderation: %d\n\nSending one by one...",
+	StatsTitle:         "📊 *Service Statistics*",
 	// FAQ, About, Pricing, Contact
 	FAQ: `❓ *FAQ*
 
-*How fast is a post published?*
+• *How fast are posts published?*
 — Usually within 24 hours after moderation.
 
-*Can I use a Telegram contact?*
+• *Can I post a resume?*
+— Yes. Resumes follow the same pricing and moderation rules.
+
+• *Is salary range required?*
+— Recommended, but not mandatory.
+
+• *Can I use a Telegram username as contact?*
 — Yes, @username is allowed.
 
-*Is salary range required?*
-— Preferred, but not required.
+• *Do you accept files?*
+— No. Only external links to resumes.`,
+	About: `ℹ️ *About*
 
-*How does payment work?*
-— After approval, admin will contact you.
+We publish verified job vacancies and candidate resumes with manual moderation to maintain quality.
 
-*Can I attach a resume file?*
-— No, only links (Google Docs, Notion, etc.)`,
-	About: `ℹ️ *About the Service*
+The platform is designed for:
+• Companies and HR managers
+• Recruiters
+• Developers and tech specialists
 
-We publish verified jobs and resumes with manual moderation to maintain channel quality.
+No spam. No scams. Quality-first.`,
+	Pricing: `💰 *Pricing*
 
-Our goal is to connect companies and professionals without spam and scam.
+• *Standard post* — $25
+• *Featured post (48h pin)* — $70
+• Packages available on request
 
-📢 Channel: @BridgeJob`,
-	Pricing: `💰 *Posting Prices*
+Payment is requested after moderation approval.`,
+	Contact: `📩 *Contact*
 
-📌 *Standard Posting* — *$25*
-1 post in channel (job or resume)
-
-⭐ *Featured* — *$65*
-Post + 48h pin
-
-📦 *5 Posts Package* — *$100*
-5 standard posts
-
-💳 *Payment:* USDT / Wise / PayPal
-
-📞 *Contact:* @amirichinvoker | @manizha\_ash`,
-	Contact: `📩 *Contact Admin:*
-
-👤 @amirichinvoker
-👤 @manizha\_ash
-
-📢 Channel: @BridgeJob`,
+For questions and partnerships:
+@amirichinvoker
+@manizha\_ash`,
 
 	// Post type selection
 	ChoosePostType: "What would you like to post?",
@@ -468,4 +458,79 @@ func GetMessages(lang Language) Messages {
 		return MessagesEN
 	}
 	return MessagesRU
+}
+
+// ButtonLabels - always in English regardless of interface language
+var ButtonLabels = struct {
+	// Post type
+	Vacancy string
+	Resume  string
+
+	// Actions
+	Submit string
+	Cancel string
+	Skip   string
+
+	// Levels
+	Junior     string
+	Middle     string
+	Senior     string
+	Internship string
+	SkipLevel  string
+
+	// Work types
+	Remote string
+	Hybrid string
+	Onsite string
+
+	// Categories
+	Web2  string
+	Web3  string
+	Other string
+
+	// Employment
+	FullTime  string
+	PartTime  string
+	Contract  string
+	Freelance string
+
+	// Languages
+	Russian string
+	English string
+}{
+	// Post type
+	Vacancy: "🏢 Job Vacancy",
+	Resume:  "👤 Resume",
+
+	// Actions
+	Submit: "✅ Submit",
+	Cancel: "❌ Cancel",
+	Skip:   "⏭️ Skip",
+
+	// Levels
+	Junior:     "🌱 Junior",
+	Middle:     "🌿 Middle",
+	Senior:     "🌳 Senior",
+	Internship: "🎓 Internship",
+	SkipLevel:  "⏭️ Skip",
+
+	// Work types
+	Remote: "🌍 Remote",
+	Hybrid: "🏢🏠 Hybrid",
+	Onsite: "🏢 Onsite",
+
+	// Categories
+	Web2:  "🌐 Web2",
+	Web3:  "⛓️ Web3",
+	Other: "💼 Other",
+
+	// Employment
+	FullTime:  "⏰ Full-time",
+	PartTime:  "🕐 Part-time",
+	Contract:  "📝 Contract",
+	Freelance: "💻 Freelance",
+
+	// Languages
+	Russian: "🇷🇺 Русский",
+	English: "🇬🇧 English",
 }
